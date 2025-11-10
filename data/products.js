@@ -1,24 +1,60 @@
-import {formatCurrency} from '../scripts/utils/money.js';
+/**
+ * Product Management System
+ * Handles product data, classes, and loading
+ */
 
+import { formatCurrency } from '../scripts/utils/money.js';
+
+/**
+ * Gets product by ID
+ * @param {string} productId - Product ID to find
+ * @returns {Product|undefined} Product object or undefined
+ */
 export function getProduct(productId) {
-  let matchingProduct;
+  if (!productId || typeof productId !== 'string') {
+    console.error('Invalid product ID:', productId);
+    return undefined;
+  }
 
-  products.forEach((product) => {
-    if (product.id === productId) {
-      matchingProduct = product;
-    }
-  });
-
-  return matchingProduct;
+  return products.find((product) => product.id === productId);
 }
 
+/**
+ * Base Product Class
+ * Represents a product in the catalog
+ */
 class Product {
+  /**
+   * @type {string} Unique product identifier
+   */
   id;
+
+  /**
+   * @type {string} Product image URL
+   */
   image;
+
+  /**
+   * @type {string} Product name
+   */
   name;
+
+  /**
+   * @type {Object} Product rating
+   * @property {number} stars - Star rating (0-5)
+   * @property {number} count - Number of ratings
+   */
   rating;
+
+  /**
+   * @type {number} Price in cents
+   */
   priceCents;
 
+  /**
+   * Creates a new Product
+   * @param {Object} productDetails - Product data
+   */
   constructor(productDetails) {
     this.id = productDetails.id;
     this.image = productDetails.image;
@@ -27,114 +63,184 @@ class Product {
     this.priceCents = productDetails.priceCents;
   }
 
+  /**
+   * Gets the URL to the star rating image
+   * @returns {string} Image URL for rating
+   */
   getStarsUrl() {
+    if (!this.rating || !this.rating.stars) {
+      return 'images/ratings/rating-0.png';
+    }
     return `images/ratings/rating-${this.rating.stars * 10}.png`;
   }
 
+  /**
+   * Gets formatted price string
+   * @returns {string} Formatted price (e.g., "$19.99")
+   */
   getPrice() {
     return `$${formatCurrency(this.priceCents)}`;
   }
 
+  /**
+   * Gets extra product information HTML
+   * Override in subclasses for product-specific info
+   * @returns {string} HTML string for extra info
+   */
   extraInfoHTML() {
     return '';
   }
 }
 
+/**
+ * Clothing Product Class
+ * Extends Product with clothing-specific features
+ */
 class Clothing extends Product {
+  /**
+   * @type {string} URL to size chart image
+   */
   sizeChartLink;
 
+  /**
+   * Creates a new Clothing product
+   * @param {Object} productDetails - Product data including sizeChartLink
+   */
   constructor(productDetails) {
     super(productDetails);
     this.sizeChartLink = productDetails.sizeChartLink;
   }
 
+  /**
+   * Gets size chart link HTML
+   * @returns {string} HTML for size chart link
+   */
   extraInfoHTML() {
-    // super.extraInfoHTML();
+    if (!this.sizeChartLink) return '';
     return `
-      <a href="${this.sizeChartLink}" target="_blank">
+      <a href="${this.sizeChartLink}" target="_blank" rel="noopener noreferrer">
         Size chart
       </a>
     `;
   }
 }
 
-/*
-const date = new Date();
-console.log(date);
-console.log(date.toLocaleTimeString());
-*/
+/**
+ * Appliance Product Class
+ * Extends Product with appliance-specific features
+ */
+class Appliance extends Product {
+  /**
+   * @type {string} URL to instructions document
+   */
+  instructionsLink;
 
-/*
-console.log(this);
+  /**
+   * @type {string} URL to warranty document
+   */
+  warrantyLink;
 
-const object2 = {
-  a: 2,
-  b: this.a
-};
-*/
-
-/*
-function logThis() {
-  console.log(this);
-}
-logThis();
-logThis.call('hello');
-
-this
-const object3 = {
-  method: () => {
-    console.log(this);
+  /**
+   * Creates a new Appliance product
+   * @param {Object} productDetails - Product data
+   */
+  constructor(productDetails) {
+    super(productDetails);
+    this.instructionsLink = productDetails.instructionsLink;
+    this.warrantyLink = productDetails.warrantyLink;
   }
-};
-object3.method();
-*/
 
+  /**
+   * Gets appliance info HTML
+   * @returns {string} HTML for instructions and warranty links
+   */
+  extraInfoHTML() {
+    const links = [];
+    if (this.instructionsLink) {
+      links.push(`<a href="${this.instructionsLink}" target="_blank" rel="noopener noreferrer">Instructions</a>`);
+    }
+    if (this.warrantyLink) {
+      links.push(`<a href="${this.warrantyLink}" target="_blank" rel="noopener noreferrer">Warranty</a>`);
+    }
+    return links.join(' | ');
+  }
+}
+
+/**
+ * @type {Array<Product>} Array of all products
+ */
 export let products = [];
 
+/**
+ * Loads products from backend using Fetch API (modern approach)
+ * @returns {Promise<void>}
+ */
 export function loadProductsFetch() {
-  const promise = fetch(
-    'https://supersimplebackend.dev/products'
-  ).then((response) => {
-    return response.json();
-  }).then((productsData) => {
-    products = productsData.map((productDetails) => {
-      if (productDetails.type === 'clothing') {
-        return new Clothing(productDetails);
+  return fetch('https://supersimplebackend.dev/products')
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return new Product(productDetails);
+      return response.json();
+    })
+    .then((productsData) => {
+      if (!Array.isArray(productsData)) {
+        throw new Error('Invalid products data format');
+      }
+
+      products = productsData.map((productDetails) => {
+        if (productDetails.type === 'clothing') {
+          return new Clothing(productDetails);
+        }
+        if (productDetails.type === 'appliance') {
+          return new Appliance(productDetails);
+        }
+        return new Product(productDetails);
+      });
+
+      console.log(`Loaded ${products.length} products`);
+    })
+    .catch((error) => {
+      console.error('Error loading products:', error);
+      throw error;
     });
-
-    console.log('load products');
-  }).catch((error) => {
-    console.log('Unexpected error. Please try again later.');
-  });
-
-  return promise;
 }
-/*
-loadProductsFetch().then(() => {
-  console.log('next step');
-});
-*/
 
-export function loadProducts(fun) {
+/**
+ * Loads products from backend using XMLHttpRequest (legacy)
+ * @param {Function} callback - Callback function when products are loaded
+ * @returns {void}
+ * @deprecated Use loadProductsFetch instead
+ */
+export function loadProducts(callback) {
   const xhr = new XMLHttpRequest();
 
   xhr.addEventListener('load', () => {
-    products = JSON.parse(xhr.response).map((productDetails) => {
-      if (productDetails.type === 'clothing') {
-        return new Clothing(productDetails);
+    try {
+      const productsData = JSON.parse(xhr.response);
+      if (!Array.isArray(productsData)) {
+        throw new Error('Invalid products data format');
       }
-      return new Product(productDetails);
-    });
 
-    console.log('load products');
+      products = productsData.map((productDetails) => {
+        if (productDetails.type === 'clothing') {
+          return new Clothing(productDetails);
+        }
+        if (productDetails.type === 'appliance') {
+          return new Appliance(productDetails);
+        }
+        return new Product(productDetails);
+      });
 
-    fun();
+      console.log(`Loaded ${products.length} products`);
+      if (callback) callback();
+    } catch (error) {
+      console.error('Error loading products:', error);
+    }
   });
 
   xhr.addEventListener('error', (error) => {
-    console.log('Unexpected error. Please try again later.');
+    console.error('Failed to load products from backend:', error);
   });
 
   xhr.open('GET', 'https://supersimplebackend.dev/products');

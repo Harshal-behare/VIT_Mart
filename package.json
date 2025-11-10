@@ -1,0 +1,30 @@
+{
+  "name": "vit-mart",
+  "version": "1.0.0",
+  "description": "A modern e-commerce application built with vanilla JavaScript",
+  "main": "index.html",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src/ scripts/ data/ --fix",
+    "format": "prettier --write \"src/**/*.{js,html,css,json}\" \"scripts/**/*.{js,html,css,json}\" \"data/**/*.{js,html,css,json}\"",
+    "test": "jasmine",
+    "start": "npx http-server -p 8080 -c-1",
+    "dev": "npx live-server"
+  },
+  "keywords": [
+    "ecommerce",
+    "shopping",
+    "cart",
+    "checkout"
+  ],
+  "author": "Harshal Behare",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.54.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.29.0",
+    "jasmine-core": "^5.1.1",
+    "prettier": "^3.1.0"
+  },
+  "dependencies": {}
+}
